@@ -1,0 +1,204 @@
+What is distributed system?
+1. Operate concurently
+2. Fail independently
+3. Do not share the same clock
+
+storage: relational/mongo, cassandra, hdfs
+computing: hadoop,spark, storm
+synchronization: NTP, vector clocks
+consensus: paxos, zookeeper
+messaging: kafka,  
+
+problems:
+    complexity
+    consistency
+
+strategies:
+    read replication (read oriented)
+    sharding [by key] (write oriented+read oriented) 
+        - more complexity
+        - limited data model
+        - limited data access patterns (i.e. analytical queries have to go to all nodes)
+
+consistent hashing (cassandra or dynamo style database)
+    - ring structure, uniform distribution
+    - hash the key and go to the node that handles that range
+    - can scale almost linearly
+    - lack of redundancy is a problem, so replication but at cost of consistency
+    Strong consistency rule:
+        R+W>N   N - number of replicas
+                W - number of nodes that need to acknowledge the update
+                R - number of nodes that need to agree on read
+                if they don't agree entropy problem
+    benifits: scale, with transactional data
+
+CAP theorem (all three never possible)
+    - Consistency
+    - Availability
+    - Partition tolerance (ability untangle split brain after fault)
+
+Distributed transactions
+    - parallelizations
+    - uneven workloads
+    responses to failure
+        - write-off (fail to proceed)
+        - retry
+        - compensating action
+    problems:
+        - low throughput
+
+distributed computing
+    - scatter/gather
+    - MapReduce
+    - Hadoop (batch processing)
+    - Spark
+    - Storm (event processing/real time)
+
+MapReduce:
+    - computation pattern
+    - two functions ( Map and Reduce )
+    - keep data where it is
+    - (K,V) -> Mapper -> list [(K,V), (K,V), (K,V), ...] -> Shuffle (done by framework)
+    -> (K, [V,V,V,V,...]) -> Recucer (aggregation) -> smaller list [[(K,V), (K,V), ...]
+
+Hadoop:
+    - MapReduce API
+    - MapReduce job management
+    - HDFS distributed  filesystem (files and directories in immutable replicated blocks,
+                                    single replicated master - metadata mgmnt(name node - all in-meory), knows where blocks of data stored on data nodes, coordinates replicas;
+                                    limitations - heap size of jvm, number of objects                                    
+                                    )
+    - enormous ecosystem (hbase = column family db,
+                          hive = sql-like interface, 
+                          pig = other query language, 
+                          ooze - job workflow mgmnt,
+                          zookeeper,
+                          mahout - machine learning on top of hadoop,
+                          cascading - API for managing many map-reduce jobs,
+                          scoop - relational databaseing,
+                          flume, scribe - logging systems)
+    How Hadoop computing works:
+        Send Job (Map+Reduce jar) ->
+        Master node (Job tracker) -> 
+        Data Nodes (Task tracker) -> execute task on local data
+
+
+Spark:
+    - scatter\gather pattern (batch processing)
+    - more general data model (RDD -resilients distributed datasets)
+    - more general programming model (transform/action), richer API
+    - storage agnostic (i.e. Spark+Cassandra connector)
+
+How computing works in Spark:
+Outside cluster: Spark Client -> Spark Context(Driver) -> Create Job -> Submit to
+Inside cluster (i.e. Cassandra): Cluster manager -> break to tasks -> send task to nodes where data lives
+on Spark worker node: Executor (jvm) - receives tasks(transformation\action), can be several 
+                      -> send data in Cache -> work on data in RDDs
+RDD: -bigger than a computer (split up on many)
+     -read from an input source (i.e. Cassandra table)
+     -output of a pure function (can transform)
+     -immutable
+     -typed (i.e pair but typed)
+     -ordered
+     -lazily evaluated
+     -partitioned
+     -collection of things
+
+Spark API:
+    -connector API
+    -transformations of RDDs
+    -actions (count, collect, reduce)
+
+Storm:
+    -streaming computation and data processing framework
+    -frendlier programming model than message passing
+    -at-least-once messaging semantics
+    -horizontally scalable and fault tolerant
+    -low latency processing of massive scale data
+
+Storm Programming model:
+    -Stream - a sequence of tuples (lots)
+    -spout - a source of streams
+    -Bolt - accepts a stream applies a function produces one or more output streams
+    -Topology: a graph of spouts and bolts; a "job" that runs indefinitely
+
+POS(spout) -> Clickstream (stream) -> Bolt 1 -> spout 2
+                                   -> Bolt 2
+Architecture:
+    Nimbus (control node) <-> Zookeeper cluster <-> Supervisors (computing nodes)
+
+Nimbus - central coordination of jobs
+Supervisor - a node that performs processing (work of bolt or spout)
+Worker: a JVM process running on Supervisor nodes where topology executes (can run one or more tasks)
+Task: Taks a thread of bolts and spouts execution (bolt or spout can run on multiple Supervisors)
+
+To handle mapping to data we need partitioning strategy:
+    -Stream grouping (assign tuples to tasks through a consistent-hashing mechanism)
+    -Configurable
+        1. Shuffle grouping: random assignment
+        2. Fields Grouping: mod hash of subset of tuple fields
+        3. All grouping: send to every task
+
+Lambda Architecture:
+    Batch processing + Stream processing
+    -high rate of events
+    -must store, must interpret
+    -the wrong answer (good enough), fast
+    -the right answer, slowly
+
+    Event stream -> long-term storage (batch processing, slow ,accurate) - big data stored          -> Fast NoSQL store
+                 -> Temporary queueing (stream processing, fast, wrong) - append-only distr. queue  /
+    Events are immutable!
+    Batch and stream processing are functional.
+
+Synchronization:
+    "Now" is problematic
+    Options:
+    -estimate the time - last one wins
+    -Network time protocol
+    -Derive the time logically: vector clocks
+
+Network Time Protocol (+-10ms):
+    -very accurate clock on the internet
+    -but network latency is variable!
+    -NTP measures latency and accounts it
+    -Uses servers calls strata (stratum 0: atomic or GPS +-10ns)
+                               (stratum 1: server attached to 0 clock +-5us)
+                               (stratum 2: servers that sync to stratum 1 +10ms)
+                               (stratum 3: server syncs to stratum 2 +10ms)
+                               ...
+                               (stratum 15: server attached to stratum 14 +10ms)
+    -UDP:123
+    -64 bits timestamp (32 bits seconds, 32 bits of fraction of a second) from 1 Jan, 1900
+    -Year 2036 problem
+    -delta time = (t3-t0)-(t2-t1)
+        t3 - who received
+        t0 - cliet transmit timestamp
+        t3-t0 = roundtrip time
+        t2 - server transmit time
+        t1 - server receive timestamp
+
+
+Vector clocks:
+    -a mean of proving sequence
+    -not a means of telling the time
+    -concurently modifying one value
+    -we know actors by ID
+    -every actor tracks a sequence number
+    -have to resolve the conflicts
+    -cannot be wrong (Last write wins can)
+    -brings complexity into the Client
+    
+
+
+
+
+
+
+
+
+
+
+
+
+    

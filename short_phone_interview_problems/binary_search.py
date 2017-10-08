@@ -2,12 +2,12 @@
 
 __author__ = "bt3"
 
-def binary_search(array, value):   
-    last, first = len(array), 0
+def binary_search(in_in_array, value):   
+    last, first = len(in_array), 0
     
     while first < last:
         mid = (last - first)//2
-        item = array[mid]
+        item = in_array[mid]
         
         if item == value:
             return True
@@ -20,31 +20,31 @@ def binary_search(array, value):
     
     return False
 
-def binary_search_rec(array, value, first=0, last=None):
-    last = last or len(array)
-    if len(array[first:last]) < 1:
+def binary_search_rec(in_array, value, first=0, last=None):
+    last = last or len(in_array)
+    if len(in_array[first:last]) < 1:
         return False
     
     mid = (last - first)//2
-    if array[mid] == value:
+    if in_array[mid] == value:
         return True
-    elif array[mid] < value:
-        return binary_search_rec(array, value, first=first, last=mid)
+    elif in_array[mid] < value:
+        return binary_search_rec(in_array, value, first=first, last=mid)
     else:
-        return binary_search_rec(array, value, first=mid, last=last)
+        return binary_search_rec(in_array, value, first=mid, last=last)
 
     
 if __name__ == '__main__':    
-    array = [3, 4, 6, 7, 10, 11, 34, 67, 84]
+    in_array = [3, 4, 6, 7, 10, 11, 34, 67, 84]
     value = 6
-    assert(binary_search(array, value) == True)   
-    assert(binary_search_rec(array, value) == True)  
+    assert(binary_search(in_array, value) == True)   
+    assert(binary_search_rec(in_array, value) == True)  
     value = 8
-    assert(binary_search(array, value) == False)
-    assert(binary_search_rec(array, value) == False)  
-    array = [8]
-    assert(binary_search(array, value) == True)
-    assert(binary_search_rec(array, value) == True)  
-    array = []
-    assert(binary_search(array, value) == False)
-    assert(binary_search_rec(array, value) == False)  
+    assert(binary_search(in_array, value) == False)
+    assert(binary_search_rec(in_array, value) == False)  
+    in_array = [8]
+    assert(binary_search(in_array, value) == True)
+    assert(binary_search_rec(in_array, value) == True)  
+    in_array = []
+    assert(binary_search(in_array, value) == False)
+    assert(binary_search_rec(in_array, value) == False)  

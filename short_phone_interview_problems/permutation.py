@@ -20,12 +20,12 @@ def permutation(array):
 if __name__ == '__main__':
     word = 'abc'
     result = ['abc', 'acb', 'bac', 'bca', 'cab', 'cba']
-    assert(permutation(word) == result)
+    assert permutation(word) == result
     
     word = ''
     result = ['']
-    assert(permutation(word) == result)
+    assert permutation(word) == result
     
     word = 'a'
     result = ['a']
-    assert(permutation(word) == result)
+    assert permutation(word) == result
